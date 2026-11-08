@@ -4,6 +4,8 @@ Android companion for the Teenage Engineering EP-133 K.O. II over USB-C: sample 
 
 Target device: K.O. II, firmware 2.5.1. The app checks `os_version` from GREET against 2.0.5 and only enables USB audio from 2.5.0.
 
+A German user manual is in [docs/HANDBUCH.md](docs/HANDBUCH.md).
+
 ## Layout
 
 | Module | Kind | Contents |
