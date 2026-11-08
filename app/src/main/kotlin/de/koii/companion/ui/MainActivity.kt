@@ -104,7 +104,7 @@ private fun Root(vm: KoiiViewModel) {
         if (transfer.active || transfer.queued > 0) {
             Column(Modifier.fillMaxWidth().background(Ink.Surface).padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text(
-                    transfer.label.uppercase() + if (transfer.queued > 1) "  (+${transfer.queued - 1})" else "",
+                    transfer.label + if (transfer.queued > 1) "  (+${transfer.queued - 1})" else "",
                     style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(bottom = 4.dp),
                 )
                 Meter(transfer.fraction)
@@ -124,20 +124,19 @@ private fun Root(vm: KoiiViewModel) {
 @Composable
 private fun TopBar(vm: KoiiViewModel) {
     val link by vm.g.session.link.collectAsState()
-    val (label, color) = when (val l = link) {
-        is Link.Online -> "K.O. II · FW ${l.info.greet.osVersion}" to Ink.group(1)
-        is Link.Connecting -> "Connecting" to Ink.group(2)
-        Link.NeedsPermission -> "USB permission" to Ink.group(2)
-        is Link.Failed -> "Error" to Ink.group(3)
-        Link.Offline -> "Offline" to Ink.Dim
+    val storage by vm.g.session.storage.collectAsState()
+    val text = when (val l = link) {
+        is Link.Online -> "K.O. II  FW ${l.info.greet.osVersion}" + (storage?.let { "  ${it.freeBytes / 1024 / 1024} MB free" } ?: "")
+        is Link.Connecting -> "Connecting"
+        Link.NeedsPermission -> "Allow USB access"
+        is Link.Failed -> "Error, tap for details"
+        Link.Offline -> "No device"
     }
     Row(
         Modifier.fillMaxWidth().background(Ink.Surface).padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("KO II", style = MaterialTheme.typography.titleMedium, color = Ink.Accent)
-        Text(" COMPANION", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-        Chip(label, color = color, onClick = { vm.open(Sub.Device) })
-        Chip("Settings", color = Ink.Dim, modifier = Modifier.padding(start = 8.dp), onClick = { vm.open(Sub.Settings) })
+        LcdReadout(text, Modifier.weight(1f), onClick = { vm.open(Sub.Device) })
+        Chip("Settings", color = Ink.Dim, modifier = Modifier.padding(start = 10.dp), dot = false, onClick = { vm.open(Sub.Settings) })
     }
 }

@@ -61,6 +61,10 @@ Settings (command 6) are not implemented: the device answers "command not found"
 - Keys: on-screen keyboard with chords (maj/min/sus/dim, 6/7/9, low octave) and arpeggiator (4 modes, 6 rates, 3 octaves) on the MIDI channel from Settings. Tempo is the app BPM, not yet locked to the device clock.
 - Library tab: projects, backup/restore, trash.
 
+## Design
+
+Applied the frontend-design guidance: the top bar is an inset readout after the K.O. II's own display (the only monospaced, capitalised text), pads carry large numerals like the silk-screen on the hardware, titles and keys use the system condensed face and running text the system sans. Text is sentence case, section headings are separated by a rule instead of coloured capitals, and radii follow role (pads large, keys medium, chips round). Palettes: Slate, K.O. II, Mono.
+
 ## Roadmap status
 
 - M1–M3, M5–M7: implemented.

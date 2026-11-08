@@ -57,7 +57,6 @@ fun PadsScreen(vm: KoiiViewModel) {
 
     Screen("Pads") {
         Column(Modifier.verticalScroll(rememberScrollState())) {
-            Label("Project")
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (p in 1..PadRepository.PROJECTS) {
                     TeButton("$p", { vm.padProject.value = p }, Modifier.weight(1f), selected = project == p)
@@ -97,11 +96,12 @@ fun PadsScreen(vm: KoiiViewModel) {
                             selected = pressed || note in held,
                             filled = soundId != null || assignMode,
                             tint = Ink.group(group),
+                            corner = 16.dp,
                         ) { fg ->
                             Column {
-                                Text("${pad + 1}", style = MaterialTheme.typography.titleMedium, color = fg)
+                                Text("${pad + 1}", style = MaterialTheme.typography.displayMedium, color = fg)
                                 Text(
-                                    soundId?.let { names[it] ?: slots[it]?.name.orEmpty() } ?: if (assignMode) "tap to assign" else "",
+                                    soundId?.let { names[it] ?: slots[it]?.name.orEmpty() } ?: if (assignMode) "Tap to assign" else "",
                                     style = MaterialTheme.typography.labelSmall, color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis,
                                 )
                             }
@@ -114,7 +114,7 @@ fun PadsScreen(vm: KoiiViewModel) {
                 TeButton("Play pads", { assignMode = false }, Modifier.weight(1f), selected = !assignMode)
                 TeButton("Assign", { assignMode = true }, Modifier.weight(1f), selected = assignMode, enabled = online)
             }
-            Label("Transport")
+            Gap(8)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 TeButton("Play", { vm.op("Transport") { g.midi.start() } }, Modifier.weight(1f), enabled = online)
                 TeButton("Stop", { vm.op("Transport") { g.midi.stop() } }, Modifier.weight(1f), enabled = online)
@@ -156,11 +156,11 @@ fun PadAssignScreen(vm: KoiiViewModel, target: Sub.PadAssign) {
 
     Screen("Assign", actions = { TeButton("Back", { g.localPlayer.stop(); vm.back() }) }) {
         Text(
-            "P%02d · GROUP %c · PAD %02d".format(target.project, target.group, target.pad),
+            "Project %d, group %c, pad %d".format(target.project, target.group, target.pad),
             style = MaterialTheme.typography.titleMedium,
         )
         Text(
-            if (current == null) "No sound assigned." else "Now: ${"%03d".format(current)} ${names[current].orEmpty()}",
+            if (current == null) "Nothing assigned yet." else "Currently ${"%03d".format(current)} ${names[current].orEmpty()}",
             style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 6.dp),
         )
         Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -169,7 +169,7 @@ fun PadAssignScreen(vm: KoiiViewModel, target: Sub.PadAssign) {
         }
 
         if (source == 0) {
-            OutlinedTextField(filter, { filter = it }, label = { Text("FILTER") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(filter, { filter = it }, label = { Text("Filter") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             val ids = slots.keys.sorted().filter { id ->
                 filter.isBlank() || "%03d".format(id).contains(filter) || (names[id] ?: slots[id]?.name.orEmpty()).contains(filter, ignoreCase = true)
             }
@@ -180,23 +180,23 @@ fun PadAssignScreen(vm: KoiiViewModel, target: Sub.PadAssign) {
                         Text("%03d  %s".format(id, names[id] ?: slots[id]?.name.orEmpty()), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
                         TeButton("Play", { vm.preview(id) })
                         Box(Modifier.padding(start = 6.dp)) {
-                            TeButton("Use", { vm.assignSound(target.project, target.group, target.pad, id) }, selected = current == id)
+                            TeButton("Assign", { vm.assignSound(target.project, target.group, target.pad, id) }, selected = current == id)
                         }
                     }
                     Rule()
                 }
             }
         } else if (loopDir == null) {
-            Text("Pick a folder on your phone that holds your loops. They are converted and uploaded when you put one on a pad.", style = MaterialTheme.typography.bodyMedium)
+            Text("Choose the folder on your phone that holds your loops. A loop is converted and uploaded when you put it on a pad.", style = MaterialTheme.typography.bodyMedium)
             Gap()
             TeButton("Choose loop folder", { folderPicker.launch(null) }, Modifier.fillMaxWidth())
         } else {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(if (scanning) "Scanning…" else "${loops.size} loops", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                Text(if (scanning) "Scanning…" else "${loops.size} loops found", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                 TeButton("Rescan", { g.loops.refresh() })
             }
             loopError?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
-            OutlinedTextField(filter, { filter = it }, label = { Text("FILTER") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(filter, { filter = it }, label = { Text("Filter") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             val shown = loops.filter { filter.isBlank() || it.name.contains(filter, ignoreCase = true) || it.folder.contains(filter, ignoreCase = true) }
             LazyColumn(Modifier.weight(1f)) {
                 items(shown, key = { it.uri.toString() }) { loop ->
@@ -207,7 +207,7 @@ fun PadAssignScreen(vm: KoiiViewModel, target: Sub.PadAssign) {
                         }
                         TeButton(if (playing == loop.uri) "Stop" else "Play", { vm.toggleLoopPreview(loop) }, selected = playing == loop.uri)
                         Box(Modifier.padding(start = 6.dp)) {
-                            TeButton("Use", { vm.assignLoop(loop, target.project, target.group, target.pad); vm.back() })
+                            TeButton("Put on pad", { vm.assignLoop(loop, target.project, target.group, target.pad); vm.back() })
                         }
                     }
                     Rule()

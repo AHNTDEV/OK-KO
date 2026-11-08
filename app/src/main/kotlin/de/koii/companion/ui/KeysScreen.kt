@@ -55,9 +55,14 @@ fun KeysScreen(vm: KoiiViewModel) {
 
     Screen("Keys") {
         Column(Modifier.verticalScroll(rememberScrollState())) {
-            if (!online) Text("Connect the device to play it from here.", style = MaterialTheme.typography.bodyMedium)
+            if (!online) {
+                Text(
+                    "Connect the K.O. II with a USB-C data cable. The keys play it as soon as it is online.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Gap(10)
+            }
 
-            Label("Chord")
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 TeButton("Note", { g.keys.update { it.copy(quality = null, extension = null) } }, Modifier.weight(1f), selected = cfg.quality == null)
                 Quality.entries.forEach { q ->
@@ -77,7 +82,7 @@ fun KeysScreen(vm: KoiiViewModel) {
             }
 
             if (cfg.arp) {
-                Label("Arpeggiator  ·  $bpm BPM")
+                Label("Arpeggiator, $bpm bpm")
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     ArpMode.entries.forEach { m ->
                         TeButton(m.label, { g.keys.update { it.copy(arpMode = m) } }, Modifier.weight(1f), selected = cfg.arpMode == m)
@@ -114,9 +119,9 @@ fun KeysScreen(vm: KoiiViewModel) {
             val preview = cfg.quality?.let { q ->
                 Chords.notes((cfg.octave + 1) * 12, q, cfg.extension, cfg.lowerOctave).joinToString(" ") { Chords.noteName(it) }
             }
-            if (preview != null) Text("C chord: $preview", style = MaterialTheme.typography.bodySmall)
+            if (preview != null) Text("A C chord plays $preview.", style = MaterialTheme.typography.bodySmall)
             Text(
-                "Sent on MIDI channel ${g.prefs.midiChannel.collectAsState().value}; the device must listen to it.",
+                "Notes go out on MIDI channel ${g.prefs.midiChannel.collectAsState().value}. Set the K.O. II to listen on it.",
                 style = MaterialTheme.typography.bodySmall,
             )
             Gap(12)

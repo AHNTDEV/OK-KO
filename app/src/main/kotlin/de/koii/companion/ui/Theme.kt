@@ -34,6 +34,9 @@ class Palette(
     val onAccent: Color,
     /** One colour per pad group A–D. */
     val groups: List<Color>,
+    /** The inset readout in the top bar, after the device's own display. */
+    val lcdBg: Color,
+    val lcdFg: Color,
 )
 
 object Palettes {
@@ -44,6 +47,7 @@ object Palettes {
         dim = Color(0xFF94A3B8), faint = Color(0xFF3B4A63), edge = Color(0xFF475569),
         accent = Color(0xFF3B82F6), onAccent = Color(0xFFFFFFFF),
         groups = listOf(Color(0xFF38BDF8), Color(0xFF4ADE80), Color(0xFFFACC15), Color(0xFFFB7185)),
+        lcdBg = Color(0xFF0F172A), lcdFg = Color(0xFFFDBA74),
     )
 
     /** Warm light grey with the orange of the hardware. */
@@ -53,6 +57,7 @@ object Palettes {
         dim = Color(0xFF6B675F), faint = Color(0xFFBEB9AE), edge = Color(0xFF1B1B1B),
         accent = Color(0xFFF26A1B), onAccent = Color(0xFFFFFFFF),
         groups = listOf(Color(0xFFE5432D), Color(0xFFF28A1B), Color(0xFF2F6FDB), Color(0xFF2E9E5B)),
+        lcdBg = Color(0xFF2A2723), lcdFg = Color(0xFFFF7A2B),
     )
 
     /** The original greyscale look. */
@@ -62,6 +67,7 @@ object Palettes {
         dim = Color(0xFF8A8A8A), faint = Color(0xFF3A3A3A), edge = Color(0xFFEDEDED),
         accent = Color(0xFFEDEDED), onAccent = Color(0xFF161616),
         groups = listOf(Color(0xFFEDEDED), Color(0xFFBDBDBD), Color(0xFF8E8E8E), Color(0xFF626262)),
+        lcdBg = Color(0xFF0B0B0B), lcdFg = Color(0xFFEDEDED),
     )
 
     val all = listOf(Slate, KoII, Mono)
@@ -79,23 +85,31 @@ object Ink {
     val Edge get() = palette.edge
     val Accent get() = palette.accent
     val OnAccent get() = palette.onAccent
+    val LcdBg get() = palette.lcdBg
+    val LcdFg get() = palette.lcdFg
     fun group(i: Int): Color = palette.groups[i.coerceIn(0, palette.groups.lastIndex)]
 }
 
-/** System condensed grotesk; drop a Barlow Condensed font into res/font to replace it. */
-val Grotesk = FontFamily(Typeface.create("sans-serif-condensed", Typeface.NORMAL))
+/** System condensed grotesk for titles, numbers and keys; the default system sans for running text. */
+val Condensed = FontFamily(Typeface.create("sans-serif-condensed", Typeface.NORMAL))
+val CondensedMedium = FontFamily(Typeface.create("sans-serif-condensed", Typeface.BOLD))
+
+/** The single monospaced face in the app: the display readout. */
+val Lcd = FontFamily.Monospace
 
 private fun typography(p: Palette): Typography {
-    val base = TextStyle(fontFamily = Grotesk, color = p.fg, letterSpacing = 0.5.sp)
+    val body = TextStyle(fontFamily = FontFamily.SansSerif, color = p.fg)
+    val head = TextStyle(fontFamily = Condensed, color = p.fg)
     return Typography(
-        displayMedium = base.copy(fontSize = 40.sp, fontWeight = FontWeight.Bold, lineHeight = 44.sp),
-        headlineSmall = base.copy(fontSize = 26.sp, fontWeight = FontWeight.Bold),
-        titleMedium = base.copy(fontSize = 20.sp, fontWeight = FontWeight.Medium),
-        bodyLarge = base.copy(fontSize = 18.sp),
-        bodyMedium = base.copy(fontSize = 16.sp),
-        bodySmall = base.copy(fontSize = 13.sp, color = p.dim),
-        labelLarge = base.copy(fontSize = 16.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp),
-        labelSmall = base.copy(fontSize = 12.sp, letterSpacing = 1.sp),
+        displayMedium = head.copy(fontSize = 44.sp, fontWeight = FontWeight.Bold, lineHeight = 48.sp),
+        headlineSmall = head.copy(fontSize = 28.sp, fontWeight = FontWeight.Bold, lineHeight = 32.sp),
+        titleMedium = head.copy(fontSize = 20.sp, fontWeight = FontWeight.Medium),
+        titleSmall = head.copy(fontSize = 17.sp, fontWeight = FontWeight.Medium),
+        bodyLarge = body.copy(fontSize = 17.sp, lineHeight = 24.sp),
+        bodyMedium = body.copy(fontSize = 15.sp, lineHeight = 22.sp),
+        bodySmall = body.copy(fontSize = 13.sp, lineHeight = 19.sp, color = p.dim),
+        labelLarge = head.copy(fontSize = 17.sp, fontWeight = FontWeight.Medium),
+        labelSmall = head.copy(fontSize = 14.sp, color = p.dim),
     )
 }
 

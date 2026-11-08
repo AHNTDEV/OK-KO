@@ -98,17 +98,17 @@ fun RecorderScreen(vm: KoiiViewModel) {
             )
             Gap(6)
             TeButton(
-                "Use last take as sample", { last?.let(vm::recordingAsSample) }, Modifier.fillMaxWidth(),
+                "Save last take as sample", { last?.let(vm::recordingAsSample) }, Modifier.fillMaxWidth(),
                 enabled = last != null && !recording && link is Link.Online,
             )
-            Text("Converted to 46875 Hz / 16 bit, max 40 s, into the next free slot.", style = MaterialTheme.typography.bodySmall)
+            Text("Converted to 46875 Hz, 16 bit and at most 40 seconds, then put in the next free slot.", style = MaterialTheme.typography.bodySmall)
 
-            Label("Phone → K.O. II")
+            Label("Play from your phone into the K.O. II")
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 TeButton("Play file", { opener.launch(arrayOf("audio/*")) }, Modifier.weight(1f), enabled = audioOk)
                 TeButton("Stop", { g.player.stop() }, Modifier.weight(1f), enabled = audioOk)
             }
-            Text("Plays into the K.O. II's USB input; sample it on the device.", style = MaterialTheme.typography.bodySmall)
+            Text("The file plays into the K.O. II's USB input. Sample it on the device.", style = MaterialTheme.typography.bodySmall)
         }
     }
 }

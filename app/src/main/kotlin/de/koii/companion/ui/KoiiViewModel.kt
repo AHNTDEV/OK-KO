@@ -158,7 +158,7 @@ class KoiiViewModel(app: Application) : AndroidViewModel(app) {
     val padProject = MutableStateFlow(1)
     val padGroup = MutableStateFlow(0)
     private val _bank = MutableStateFlow<Map<Int, Int?>>(emptyMap())
-    /** Pad (1..12) → assigned sound node id of the shown project/group. */
+    /** Assigned sound node id per pad (1..12) of the shown project and group. */
     val bank: StateFlow<Map<Int, Int?>> = _bank
     private var bankJob: Job? = null
 
@@ -192,7 +192,7 @@ class KoiiViewModel(app: Application) : AndroidViewModel(app) {
     /** Converts a loop from the phone, uploads it to the next free slot and puts it on the pad. */
     fun assignLoop(loop: LoopFile, project: Int, group: Char, pad: Int) {
         g.localPlayer.stop()
-        queue("Loop → pad ${pad}") { p ->
+        queue("Loop to pad $pad") { p ->
             val sound = g.sounds.prepare(withContext(Dispatchers.IO) { readBytes(loop.uri) })
             val slot = g.sounds.freeSlots().firstOrNull() ?: error("No free slot")
             val id = g.sounds.upload(sound, loop.name, slot, p)
@@ -293,7 +293,7 @@ class KoiiViewModel(app: Application) : AndroidViewModel(app) {
     val lastRecording = MutableStateFlow<Uri?>(null)
 
     /** Re-reads the recorded WAV and sends it to the next free slot (converted to 46875 Hz / s16). */
-    fun recordingAsSample(uri: Uri) = queue("Recording → sample") { p ->
+    fun recordingAsSample(uri: Uri) = queue("Recording to sample") { p ->
         val bytes = withContext(Dispatchers.IO) { readBytes(uri) }
         val sound = g.sounds.prepare(bytes)
         val slot = g.sounds.freeSlots().firstOrNull() ?: error("No free slot")

@@ -66,7 +66,7 @@ fun SoundDetailScreen(vm: KoiiViewModel, id: Int) {
             when {
                 d?.error != null -> Text("Error: ${d.error}", style = MaterialTheme.typography.bodySmall)
                 d?.peaks != null -> Waveform(d.peaks)
-                else -> Text("Loading waveform…", style = MaterialTheme.typography.bodySmall)
+                else -> Text("Loading the waveform…", style = MaterialTheme.typography.bodySmall)
             }
             Gap(8)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -82,7 +82,7 @@ fun SoundDetailScreen(vm: KoiiViewModel, id: Int) {
                     val value = edits[p.key] ?: meta.int(p.key) ?: p.default
                     val unset = meta.int(p.key) == null && p.key !in edits
                     val shown = if (p.key == "sound.rootnote") "$value (${Chords.noteName(value)})" else "$value"
-                    Label(p.label + "  " + shown + if (unset) "  · not set" else "")
+                    Label(p.label + "  " + shown + if (unset) " (not set)" else "")
                     TeSlider(
                         value.toFloat(), { edits = edits + (p.key to it.toInt()) },
                         valueRange = p.min.toFloat()..p.max.toFloat(),
@@ -91,10 +91,10 @@ fun SoundDetailScreen(vm: KoiiViewModel, id: Int) {
                 Gap(6)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     TeButton("Reset", { edits = emptyMap() }, Modifier.weight(1f), enabled = edits.isNotEmpty())
-                    TeButton("Apply", { vm.saveSoundMeta(id, edits); edits = emptyMap() }, Modifier.weight(2f), selected = edits.isNotEmpty(), enabled = edits.isNotEmpty())
+                    TeButton("Save changes", { vm.saveSoundMeta(id, edits); edits = emptyMap() }, Modifier.weight(2f), selected = edits.isNotEmpty(), enabled = edits.isNotEmpty())
                 }
                 Text(
-                    "Metadata writes are not yet verified on every firmware. Only changed values are sent.",
+                    "Only the values you changed are sent. Writing metadata is not yet checked on a real K.O. II.",
                     style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp),
                 )
             }
@@ -107,8 +107,8 @@ fun SoundDetailScreen(vm: KoiiViewModel, id: Int) {
         AlertDialog(
             onDismissRequest = { renaming = false },
             confirmButton = { TextButton({ vm.rename(id, text); renaming = false }) { Text("OK") } },
-            dismissButton = { TextButton({ renaming = false }) { Text("CANCEL") } },
-            title = { Text("RENAME ${"%03d".format(id)}") },
+            dismissButton = { TextButton({ renaming = false }) { Text("Cancel") } },
+            title = { Text("Rename ${"%03d".format(id)}") },
             text = {
                 Column {
                     OutlinedTextField(text, { text = it }, singleLine = true)

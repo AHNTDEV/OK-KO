@@ -81,12 +81,12 @@ fun SoundsScreen(vm: KoiiViewModel) {
 
     Screen("Sounds", actions = { TeButton("Trash", onClick = { vm.open(Sub.Trash) }) }) {
         if (link !is Link.Online) {
-            Text("Connect the device to see its sounds.", style = MaterialTheme.typography.bodyMedium)
+            Text("Connect the K.O. II with a USB-C data cable. Its sounds appear here, ready to search, edit and sort.", style = MaterialTheme.typography.bodyMedium)
             return@Screen
         }
 
         OutlinedTextField(
-            query, { query = it }, label = { Text("SEARCH NAME OR SLOT") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+            query, { query = it }, label = { Text("Search by name or slot") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
         )
         Gap(6)
         if (!searching) {
@@ -94,7 +94,7 @@ fun SoundsScreen(vm: KoiiViewModel) {
                 TeButton("<", { if (page > 0) page-- }, enabled = page > 0)
                 Box(Modifier.weight(1f).padding(top = 12.dp)) {
                     Text(
-                        "%03d – %03d".format(first, visible.last()) + "  ·  ${slots.size} used",
+                        "Slots %03d to %03d, ${slots.size} used".format(first, visible.last()),
                         style = MaterialTheme.typography.titleMedium,
                     )
                 }
@@ -107,11 +107,11 @@ fun SoundsScreen(vm: KoiiViewModel) {
 
         if (moveFrom != 0) {
             Text(
-                "Moving ${"%03d".format(moveFrom)}: tap a target slot (occupied slots are swapped).",
+                "Moving ${"%03d".format(moveFrom)}. Tap a target slot; an occupied slot swaps places.",
                 style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 6.dp),
             )
         } else if (multi.isEmpty()) {
-            Text("Long-press a sound to select several.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 6.dp))
+            Text("Press and hold a sound to select several.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 6.dp))
         }
 
         // 4 columns × 12 rows = one page of 48 slots
@@ -181,10 +181,10 @@ fun SoundsScreen(vm: KoiiViewModel) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
             confirmButton = {
-                TextButton({ vm.deleteToTrash(ids); confirmDelete = false; selected = 0; multi = emptySet() }) { Text("DELETE") }
+                TextButton({ vm.deleteToTrash(ids); confirmDelete = false; selected = 0; multi = emptySet() }) { Text("Delete") }
             },
-            dismissButton = { TextButton({ confirmDelete = false }) { Text("CANCEL") } },
-            title = { Text(if (ids.size == 1) "DELETE ${"%03d".format(ids[0])}?" else "DELETE ${ids.size} SOUNDS?") },
+            dismissButton = { TextButton({ confirmDelete = false }) { Text("Cancel") } },
+            title = { Text(if (ids.size == 1) "Delete ${"%03d".format(ids[0])}?" else "Delete ${ids.size} sounds?") },
             text = { Text("A copy is kept in the app trash and can be restored.") },
         )
     }
@@ -207,8 +207,8 @@ fun UploadScreen(vm: KoiiViewModel) {
                     val sound = s.sound
                     if (sound != null) {
                         Text(
-                            "→ ${s.displayName} · %.1f s · %s · %d ch".format(
-                                sound.seconds, if (sound.fastPath) "sent as is" else "converted to 46875 Hz", sound.channels,
+                            "Becomes ${s.displayName}, %.1f s, %s, %d channel%s".format(
+                                sound.seconds, if (sound.fastPath) "sent as is" else "converted to 46875 Hz", sound.channels, if (sound.channels == 1) "" else "s",
                             ),
                             style = MaterialTheme.typography.bodySmall,
                         )
@@ -225,7 +225,7 @@ fun UploadScreen(vm: KoiiViewModel) {
         val free = vm.g.sounds.freeSlots(startSlot)
         val sendable = staged.count { it.sound != null }
         Text("Next free slot from $startSlot: ${free.firstOrNull()?.let { "%03d".format(it) } ?: "none"}", style = MaterialTheme.typography.bodySmall)
-        OutlinedTextField(start, { start = it.filter(Char::isDigit).take(3) }, label = { Text("START SLOT") }, singleLine = true)
+        OutlinedTextField(start, { start = it.filter(Char::isDigit).take(3) }, label = { Text("Start slot") }, singleLine = true)
         Gap()
         TeButton(
             "Send $sendable file(s)", { vm.sendStaged(startSlot) }, Modifier.fillMaxWidth(),
@@ -246,7 +246,7 @@ fun TrashScreen(vm: KoiiViewModel) {
             items(items.sortedByDescending { it.deletedAt }, key = { it.id }) { t ->
                 Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                     Text("${"%03d".format(t.slot)}  ${t.name}", style = MaterialTheme.typography.bodyLarge)
-                    Text("${fmt.format(java.util.Date(t.deletedAt))} · ${t.sizeBytes / 1024} KB", style = MaterialTheme.typography.bodySmall)
+                    Text("Deleted ${fmt.format(java.util.Date(t.deletedAt))}, ${t.sizeBytes / 1024} KB", style = MaterialTheme.typography.bodySmall)
                     Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         TeButton("Restore", { vm.restore(t) })
                         TeButton("Remove", { vm.purge(t) })

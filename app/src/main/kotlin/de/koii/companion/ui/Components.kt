@@ -36,8 +36,10 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
-private val shape = RoundedCornerShape(8.dp)
+/** Radius follows role: keys are mid, pads are large, chips are round. */
+private val shape = RoundedCornerShape(10.dp)
 
 /** Filled surface with an outline; pressed and selected states fill with the accent colour. */
 @Composable
@@ -65,7 +67,7 @@ fun TeButton(
             .padding(horizontal = 14.dp, vertical = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text.uppercase(), color = fg, style = MaterialTheme.typography.labelLarge, textAlign = TextAlign.Center, maxLines = 1)
+        Text(text, color = fg, style = MaterialTheme.typography.labelLarge, textAlign = TextAlign.Center, maxLines = 1)
     }
 }
 
@@ -76,19 +78,21 @@ fun TeCell(
     selected: Boolean = false,
     filled: Boolean = false,
     tint: Color? = null,
+    corner: androidx.compose.ui.unit.Dp = 10.dp,
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
     content: @Composable (fg: Color) -> Unit,
 ) {
+    val cellShape = RoundedCornerShape(corner)
     val accent = tint ?: Ink.Accent
     val bg = if (selected) accent else if (filled) Ink.Surface else Ink.Bg
     val fg = if (selected) (if (tint != null) Ink.Bg else Ink.OnAccent) else if (filled) Ink.Fg else Ink.Dim
     val edge = if (selected) accent else if (filled) (tint ?: Ink.Edge) else Ink.Faint
     Box(
         modifier
-            .clip(shape)
+            .clip(cellShape)
             .background(bg)
-            .border(BorderStroke(if (filled && !selected) 1.5.dp else 1.dp, edge), shape)
+            .border(BorderStroke(if (filled && !selected) 1.5.dp else 1.dp, edge), cellShape)
             .then(
                 if (onClick != null || onLongClick != null) {
                     Modifier.combinedClickable(onLongClick = onLongClick, onClick = onClick ?: {})
@@ -107,25 +111,26 @@ fun Screen(
 ) {
     Column(modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(title.uppercase(), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+            Text(title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
             actions()
         }
         content()
     }
 }
 
+/** Section heading. The rule above marks where a group of controls starts. */
 @Composable
 fun Label(text: String, modifier: Modifier = Modifier) {
-    Text(
-        text.uppercase(), style = MaterialTheme.typography.labelSmall, color = Ink.Accent,
-        modifier = modifier.padding(top = 14.dp, bottom = 4.dp),
-    )
+    Column(modifier.fillMaxWidth().padding(top = 18.dp, bottom = 6.dp)) {
+        Rule()
+        Text(text, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp))
+    }
 }
 
 @Composable
 fun KeyValue(key: String, value: String) {
     Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(key.uppercase(), style = MaterialTheme.typography.bodySmall)
+        Text(key, style = MaterialTheme.typography.bodySmall)
         Text(value, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
     Rule()
@@ -151,7 +156,7 @@ fun Check(text: String, checked: Boolean, onChange: (Boolean) -> Unit) {
             Modifier.size(22.dp).border(1.5.dp, if (checked) Ink.Accent else Ink.Edge, RoundedCornerShape(4.dp))
                 .background(if (checked) Ink.Accent else Ink.Bg),
         )
-        Text(text.uppercase(), modifier = Modifier.padding(start = 12.dp), style = MaterialTheme.typography.labelLarge)
+        Text(text, modifier = Modifier.padding(start = 12.dp), style = MaterialTheme.typography.labelLarge)
     }
 }
 
@@ -165,15 +170,15 @@ fun Meter(fraction: Float, modifier: Modifier = Modifier, color: Color = Ink.Acc
 
 /** Small pill: status or tag. */
 @Composable
-fun Chip(text: String, color: Color = Ink.Accent, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
+fun Chip(text: String, color: Color = Ink.Accent, modifier: Modifier = Modifier, dot: Boolean = true, onClick: (() -> Unit)? = null) {
     Row(
         modifier.clip(CircleShape).border(1.dp, color, CircleShape)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(horizontal = 10.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(8.dp).clip(CircleShape).background(color))
-        Text(text.uppercase(), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(start = 6.dp), maxLines = 1)
+        if (dot) Box(Modifier.size(8.dp).clip(CircleShape).background(color))
+        Text(text, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(start = if (dot) 6.dp else 0.dp), maxLines = 1)
     }
 }
 
@@ -191,7 +196,7 @@ fun TabBar(labels: List<String>, selected: Int, onSelect: (Int) -> Unit) {
                 ) {
                     Box(Modifier.size(width = 24.dp, height = 3.dp).clip(CircleShape).background(if (on) Ink.Accent else Ink.Surface))
                     Text(
-                        l.uppercase(), color = if (on) Ink.Fg else Ink.Dim,
+                        l, color = if (on) Ink.Fg else Ink.Dim,
                         style = MaterialTheme.typography.labelLarge, maxLines = 1, modifier = Modifier.padding(top = 6.dp),
                     )
                 }
@@ -235,4 +240,21 @@ fun TeSlider(value: Float, onChange: (Float) -> Unit, valueRange: ClosedFloating
             thumbColor = Ink.Accent, activeTrackColor = Ink.Accent, inactiveTrackColor = Ink.Faint,
         ),
     )
+}
+
+/** Inset readout after the device's display: the one place the app uses a monospaced face and capitals. */
+@Composable
+fun LcdReadout(text: String, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
+    val panel = RoundedCornerShape(6.dp)
+    Box(
+        modifier.clip(panel).background(Ink.LcdBg).border(1.dp, Ink.Faint, panel)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(horizontal = 12.dp, vertical = 9.dp),
+    ) {
+        Text(
+            text.uppercase(),
+            style = MaterialTheme.typography.bodyMedium.copy(fontFamily = Lcd, color = Ink.LcdFg, letterSpacing = 1.sp),
+            maxLines = 1, overflow = TextOverflow.Ellipsis,
+        )
+    }
 }

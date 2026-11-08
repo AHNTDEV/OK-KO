@@ -57,7 +57,7 @@ fun LibraryScreen(vm: KoiiViewModel) {
     }) {
         Column(Modifier.verticalScroll(rememberScrollState())) {
             Label("Projects")
-            if (!online) Text("Connect the device to see its projects.", style = MaterialTheme.typography.bodyMedium)
+            if (!online) Text("Connect the K.O. II with a USB-C data cable to see its projects and back them up.", style = MaterialTheme.typography.bodyMedium)
             projects.forEach { p ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(p.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
@@ -92,16 +92,16 @@ fun LibraryScreen(vm: KoiiViewModel) {
         AlertDialog(
             onDismissRequest = { vm.cancelRestore() },
             confirmButton = {
-                TextButton({ vm.restoreBackup(overwrite, rSounds, rProjects) }, enabled = rSounds || rProjects) { Text("RESTORE") }
+                TextButton({ vm.restoreBackup(overwrite, rSounds, rProjects) }, enabled = rSounds || rProjects) { Text("Restore") }
             },
-            dismissButton = { TextButton({ vm.cancelRestore() }) { Text("CANCEL") } },
-            title = { Text("RESTORE BACKUP") },
+            dismissButton = { TextButton({ vm.cancelRestore() }) { Text("Cancel") } },
+            title = { Text("Restore backup") },
             text = {
                 Column {
-                    Text("$date · FW ${meta.osVersion}", style = MaterialTheme.typography.bodySmall)
+                    Text("Made $date, firmware ${meta.osVersion}", style = MaterialTheme.typography.bodySmall)
                     Check("${meta.sounds.size} sounds", rSounds && meta.sounds.isNotEmpty()) { rSounds = it && meta.sounds.isNotEmpty() }
                     Check("${meta.projects.size} projects", rProjects && meta.projects.isNotEmpty()) { rProjects = it && meta.projects.isNotEmpty() }
-                    Check("Replace what is on the device", overwrite) { overwrite = it }
+                    Check("Replace what is already on the device", overwrite) { overwrite = it }
                     Text(
                         if (overwrite) "Occupied slots and existing projects will be overwritten."
                         else "Occupied slots and existing projects are skipped.",

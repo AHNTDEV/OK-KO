@@ -46,7 +46,7 @@ fun SettingsScreen(vm: KoiiViewModel) {
 
             Label("Loop folder (optional)")
             Text(
-                loopDir?.let { folderLabel(it) } ?: "Not set. Pick a folder on your phone with loops, then put them on pads from Pads → Assign → Loops.",
+                loopDir?.let { folderLabel(it) } ?: "No folder chosen. Choose one with your loops, then put them on pads from the Pads tab with Assign.",
                 style = MaterialTheme.typography.bodyMedium,
             )
             if (loopDir != null) {
@@ -68,7 +68,7 @@ fun SettingsScreen(vm: KoiiViewModel) {
             Label("MIDI channel")
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TeButton("−", { prefs.setMidiChannel(channel - 1) })
-                Text("CH $channel", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                Text("Channel $channel", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                 TeButton("+", { prefs.setMidiChannel(channel + 1) })
             }
             Label("Pad velocity $velocity")
@@ -86,7 +86,7 @@ fun SettingsScreen(vm: KoiiViewModel) {
             KeyValue("Protocol", "TE SysEx file protocol, USB-MIDI bulk")
             Gap()
             Text(
-                "Unverified on hardware: slot moves, previews, metadata writes, project download/upload, live events. " +
+                "Not yet checked on a real K.O. II: moving slots, previews, metadata writes, project download and upload, live events. " +
                     "Chords and the arpeggiator send plain notes on the MIDI channel above.",
                 style = MaterialTheme.typography.bodySmall,
             )
