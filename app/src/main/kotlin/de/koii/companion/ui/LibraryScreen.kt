@@ -28,7 +28,7 @@ import de.koii.companion.data.Link
 import de.koii.protocol.FileEntry
 
 @Composable
-fun ProjectsScreen(vm: KoiiViewModel) {
+fun LibraryScreen(vm: KoiiViewModel) {
     val link by vm.g.session.link.collectAsState()
     val projects by vm.projects.collectAsState()
     val plan by vm.restorePlan.collectAsState()
@@ -51,8 +51,12 @@ fun ProjectsScreen(vm: KoiiViewModel) {
         if (uri != null && p != null) vm.downloadProject(p, uri)
     }
 
-    Screen("Projects", actions = { TeButton("Refresh", { vm.refreshProjects() }, enabled = online) }) {
+    Screen("Library", actions = {
+        TeButton("Trash", { vm.open(Sub.Trash) })
+        TeButton("Refresh", { vm.refreshProjects() }, Modifier.padding(start = 6.dp), enabled = online)
+    }) {
         Column(Modifier.verticalScroll(rememberScrollState())) {
+            Label("Projects")
             if (!online) Text("Connect the device to see its projects.", style = MaterialTheme.typography.bodyMedium)
             projects.forEach { p ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {

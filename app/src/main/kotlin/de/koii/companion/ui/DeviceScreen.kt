@@ -21,7 +21,7 @@ fun DeviceScreen(vm: KoiiViewModel) {
     val storage by g.session.storage.collectAsState()
     val log by g.session.log.collectAsState()
 
-    Screen("Device") {
+    Screen("Device", actions = { TeButton("Back", { vm.back() }) }) {
         Column(Modifier.verticalScroll(rememberScrollState())) {
             val status = when (val l = link) {
                 Link.Offline -> "No device. Connect the K.O. II with USB-C."

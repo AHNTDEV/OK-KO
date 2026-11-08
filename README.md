@@ -51,9 +51,19 @@ Verified there: identity, GREET, INIT, LIST, METADATA read, PUT (device assigns 
 
 Settings (command 6) are not implemented: the device answers "command not found" on os 2.5.1.
 
+## 0.2.0
+
+- Pixel-art cassette launcher icon (adaptive vector, `app/src/main/res/drawable/ic_launcher_foreground.xml`).
+- Themes: Slate (default), K.O. II, Mono. Palette switch in Settings.
+- Optional **loop folder** (Settings, system folder picker, no storage permission). Pads → Assign → Loops: audition on the phone, then convert, upload to the next free slot and put it on the pad.
+- Pads: project 1–9 and group A–D, sample names on the pads, group colours.
+- Sounds: search by name or slot, long-press multi-select (bulk delete, bulk export to a folder), sound editor with waveform and metadata sliders (root note, pitch, pan, volume, attack, release, BPM).
+- Keys: on-screen keyboard with chords (maj/min/sus/dim, 6/7/9, low octave) and arpeggiator (4 modes, 6 rates, 3 octaves) on the MIDI channel from Settings. Tempo is the app BPM, not yet locked to the device clock.
+- Library tab: projects, backup/restore, trash.
+
 ## Roadmap status
 
 - M1–M3, M5–M7: implemented.
 - M4: MOVE/DELETE client, tap-to-move/swap grid (12 × 4 per page, 4 columns), app trash. Drag-and-drop sorting is not implemented.
 - Navigation (`KoiiViewModel`: tab + sub-screens), `SoundRepository` cache, `TransferManager` + `TransferService`: implemented.
-- Not done: hardware test, launcher icon, release signing.
+- Not done: drag-and-drop sorting, arpeggiator sync to the device clock, release signing.

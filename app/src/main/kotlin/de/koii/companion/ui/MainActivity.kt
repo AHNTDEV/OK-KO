@@ -22,12 +22,16 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
+import de.koii.companion.data.Link
 
 class MainActivity : ComponentActivity() {
     private val vm: KoiiViewModel by viewModels()
@@ -41,7 +45,20 @@ class MainActivity : ComponentActivity() {
             registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) {}
                 .launch(Manifest.permission.POST_NOTIFICATIONS)
         }
-        setContent { KoiiTheme { Root(vm) } }
+        setContent {
+            val themeId by vm.g.prefs.theme.collectAsState()
+            val palette = Palettes.byId(themeId)
+            KoiiTheme(palette) {
+                val view = LocalView.current
+                SideEffect {
+                    WindowCompat.getInsetsController(window, view).apply {
+                        isAppearanceLightStatusBars = !palette.dark
+                        isAppearanceLightNavigationBars = !palette.dark
+                    }
+                }
+                Root(vm)
+            }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -65,27 +82,30 @@ private fun Root(vm: KoiiViewModel) {
     BackHandler(enabled = sub != null) { vm.back() }
 
     Column(Modifier.fillMaxSize().background(Ink.Bg).systemBarsPadding().imePadding()) {
+        TopBar(vm)
         Box(Modifier.weight(1f)) {
             when (val s = sub) {
+                Sub.Device -> DeviceScreen(vm)
+                Sub.Settings -> SettingsScreen(vm)
                 Sub.Upload -> UploadScreen(vm)
                 Sub.Trash -> TrashScreen(vm)
                 is Sub.PadAssign -> PadAssignScreen(vm, s)
+                is Sub.SoundDetail -> SoundDetailScreen(vm, s.id)
                 null -> when (tab) {
-                    Tab.DEVICE -> DeviceScreen(vm)
-                    Tab.SOUNDS -> SoundsScreen(vm)
                     Tab.PADS -> PadsScreen(vm)
-                    Tab.PROJECTS -> ProjectsScreen(vm)
+                    Tab.SOUNDS -> SoundsScreen(vm)
+                    Tab.KEYS -> KeysScreen(vm)
                     Tab.REC -> RecorderScreen(vm)
-                    Tab.SETTINGS -> SettingsScreen(vm)
+                    Tab.LIBRARY -> LibraryScreen(vm)
                 }
             }
         }
 
         if (transfer.active || transfer.queued > 0) {
-            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+            Column(Modifier.fillMaxWidth().background(Ink.Surface).padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text(
                     transfer.label.uppercase() + if (transfer.queued > 1) "  (+${transfer.queued - 1})" else "",
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(bottom = 4.dp),
                 )
                 Meter(transfer.fraction)
             }
@@ -97,6 +117,27 @@ private fun Root(vm: KoiiViewModel) {
                 TeButton("OK", { vm.say(null) }, Modifier.padding(8.dp))
             }
         }
-        TabBar(Tab.entries.map { it.label }, tab.ordinal) { vm.select(Tab.entries[it]) }
+        TabBar(Tab.entries.map { it.label }, if (sub == null) tab.ordinal else -1) { vm.select(Tab.entries[it]) }
+    }
+}
+
+@Composable
+private fun TopBar(vm: KoiiViewModel) {
+    val link by vm.g.session.link.collectAsState()
+    val (label, color) = when (val l = link) {
+        is Link.Online -> "K.O. II · FW ${l.info.greet.osVersion}" to Ink.group(1)
+        is Link.Connecting -> "Connecting" to Ink.group(2)
+        Link.NeedsPermission -> "USB permission" to Ink.group(2)
+        is Link.Failed -> "Error" to Ink.group(3)
+        Link.Offline -> "Offline" to Ink.Dim
+    }
+    Row(
+        Modifier.fillMaxWidth().background(Ink.Surface).padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("KO II", style = MaterialTheme.typography.titleMedium, color = Ink.Accent)
+        Text(" COMPANION", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+        Chip(label, color = color, onClick = { vm.open(Sub.Device) })
+        Chip("Settings", color = Ink.Dim, modifier = Modifier.padding(start = 8.dp), onClick = { vm.open(Sub.Settings) })
     }
 }

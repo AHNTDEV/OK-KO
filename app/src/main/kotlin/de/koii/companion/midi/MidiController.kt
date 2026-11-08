@@ -107,6 +107,18 @@ class MidiController(
         if (note in FIRST_NOTE..LAST_NOTE) send(0x80 or channel, note, 0)
     }
 
+    /** Any note 0..127 (keyboard / chords), unlike [noteOn] which is limited to the pad range. */
+    suspend fun keyOn(note: Int, velocity: Int = prefs.velocity.value) {
+        if (note in 0..127) send(0x90 or channel, note, velocity.coerceIn(1, 127))
+    }
+
+    suspend fun keyOff(note: Int) {
+        if (note in 0..127) send(0x80 or channel, note, 0)
+    }
+
+    /** CC 123 on the current channel. */
+    suspend fun allNotesOff() = send(0xB0 or channel, 123, 0)
+
     suspend fun start() = send(0xFA)
     suspend fun stop() = send(0xFC)
     suspend fun cont() = send(0xFB)

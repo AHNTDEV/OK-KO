@@ -47,17 +47,27 @@ fun SoundsScreen(vm: KoiiViewModel) {
     val names by g.sounds.names.collectAsState()
 
     var page by rememberSaveable { mutableStateOf(0) }
+    var query by rememberSaveable { mutableStateOf("") }
     var selected by rememberSaveable { mutableStateOf(0) }       // 0 = none
     var moveFrom by rememberSaveable { mutableStateOf(0) }       // 0 = not moving
-    var renaming by remember { mutableStateOf(false) }
+    var multi by remember { mutableStateOf(setOf<Int>()) }       // long-press selection
     var confirmDelete by remember { mutableStateOf(false) }
-    var pendingDownload by remember { mutableIntStateOf(0) }
+    var pendingDownload by remember { mutableStateOf(0) }
 
+    val searching = query.isNotBlank()
     val pages = (SoundRepository.SLOT_COUNT + PAGE - 1) / PAGE
     val first = page * PAGE + 1
-    val visible = (first until minOf(first + PAGE, SoundRepository.SLOT_COUNT + 1)).toList()
+    val visible: List<Int> = if (searching) {
+        slots.keys.sorted().filter { id ->
+            "%03d".format(id).contains(query.trim()) || (names[id] ?: entryName(slots[id])).contains(query.trim(), ignoreCase = true)
+        }.take(200)
+    } else {
+        (first until minOf(first + PAGE, SoundRepository.SLOT_COUNT + 1)).toList()
+    }
 
-    LaunchedEffect(page, slots.keys) { vm.loadNames(visible.filter { it in slots }) }
+    LaunchedEffect(page, searching, slots.keys) {
+        vm.loadNames(if (searching) slots.keys else visible.filter { it in slots })
+    }
 
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris: List<Uri> ->
         if (uris.isNotEmpty()) vm.stage(uris)
@@ -65,32 +75,43 @@ fun SoundsScreen(vm: KoiiViewModel) {
     val save = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("audio/wav")) { uri: Uri? ->
         if (uri != null && pendingDownload != 0) vm.downloadSound(pendingDownload, uri)
     }
+    val exportTree = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? ->
+        if (uri != null && multi.isNotEmpty()) { vm.exportSounds(multi.sorted(), uri); multi = emptySet() }
+    }
 
-    Screen("Sounds", actions = {
-        TeButton("Trash", onClick = { vm.open(Sub.Trash) })
-    }) {
+    Screen("Sounds", actions = { TeButton("Trash", onClick = { vm.open(Sub.Trash) }) }) {
         if (link !is Link.Online) {
             Text("Connect the device to see its sounds.", style = MaterialTheme.typography.bodyMedium)
             return@Screen
         }
 
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TeButton("<", { if (page > 0) page-- }, enabled = page > 0)
-            Box(Modifier.weight(1f).padding(top = 14.dp)) {
-                Text(
-                    "%03d – %03d".format(first, visible.last()) + "  ·  ${slots.size} used",
-                    style = MaterialTheme.typography.titleMedium,
-                )
+        OutlinedTextField(
+            query, { query = it }, label = { Text("SEARCH NAME OR SLOT") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+        )
+        Gap(6)
+        if (!searching) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TeButton("<", { if (page > 0) page-- }, enabled = page > 0)
+                Box(Modifier.weight(1f).padding(top = 12.dp)) {
+                    Text(
+                        "%03d – %03d".format(first, visible.last()) + "  ·  ${slots.size} used",
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                }
+                TeButton(">", { if (page < pages - 1) page++ }, enabled = page < pages - 1)
             }
-            TeButton(">", { if (page < pages - 1) page++ }, enabled = page < pages - 1)
+        } else {
+            Text("${visible.size} match" + if (visible.size == 1) "" else "es", style = MaterialTheme.typography.bodySmall)
         }
-        Gap(8)
+        Gap(6)
 
         if (moveFrom != 0) {
             Text(
                 "Moving ${"%03d".format(moveFrom)}: tap a target slot (occupied slots are swapped).",
                 style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 6.dp),
             )
+        } else if (multi.isEmpty()) {
+            Text("Long-press a sound to select several.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 6.dp))
         }
 
         // 4 columns × 12 rows = one page of 48 slots
@@ -104,14 +125,16 @@ fun SoundsScreen(vm: KoiiViewModel) {
                 val entry = slots[slot]
                 TeCell(
                     modifier = Modifier.aspectRatio(1.35f),
-                    selected = slot == selected || slot == moveFrom,
+                    selected = slot == selected || slot == moveFrom || slot in multi,
                     filled = entry != null,
                     onClick = {
                         when {
+                            multi.isNotEmpty() -> if (entry != null) multi = if (slot in multi) multi - slot else multi + slot
                             moveFrom != 0 -> { vm.moveOrSwap(moveFrom, slot); selected = slot; moveFrom = 0 }
                             else -> selected = if (selected == slot) 0 else slot
                         }
                     },
+                    onLongClick = { if (entry != null) { multi = multi + slot; selected = 0; moveFrom = 0 } },
                 ) { fg ->
                     Column {
                         Text("%03d".format(slot), style = MaterialTheme.typography.labelSmall, color = fg)
@@ -127,48 +150,47 @@ fun SoundsScreen(vm: KoiiViewModel) {
         }
 
         Gap(8)
-        val sel = selected
-        val occupied = sel != 0 && sel in slots
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            TeButton("Play", { vm.preview(sel) }, Modifier.weight(1f), enabled = occupied)
-            TeButton("Move", { moveFrom = if (moveFrom == 0) sel else 0 }, Modifier.weight(1f), selected = moveFrom != 0, enabled = occupied)
-            TeButton("Name", { renaming = true }, Modifier.weight(1f), enabled = occupied)
-        }
-        Gap(6)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            TeButton("Save", { pendingDownload = sel; save.launch((names[sel] ?: "sound") + ".wav") }, Modifier.weight(1f), enabled = occupied)
-            TeButton("Delete", { confirmDelete = true }, Modifier.weight(1f), enabled = occupied)
-            TeButton("Upload", { pick.launch(arrayOf("audio/*", "application/octet-stream")) }, Modifier.weight(1f))
+        if (multi.isNotEmpty()) {
+            Text("${multi.size} selected", style = MaterialTheme.typography.labelLarge)
+            Gap(4)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                TeButton("Delete", { confirmDelete = true }, Modifier.weight(1f))
+                TeButton("Export", { exportTree.launch(null) }, Modifier.weight(1f))
+                TeButton("Clear", { multi = emptySet() }, Modifier.weight(1f))
+            }
+        } else {
+            val sel = selected
+            val occupied = sel != 0 && sel in slots
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                TeButton("Play", { vm.preview(sel) }, Modifier.weight(1f), enabled = occupied)
+                TeButton("Move", { moveFrom = if (moveFrom == 0) sel else 0 }, Modifier.weight(1f), selected = moveFrom != 0, enabled = occupied)
+                TeButton("Edit", { vm.openDetail(sel) }, Modifier.weight(1f), enabled = occupied)
+            }
+            Gap(6)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                TeButton("Save", { pendingDownload = sel; save.launch((names[sel] ?: "sound") + ".wav") }, Modifier.weight(1f), enabled = occupied)
+                TeButton("Delete", { confirmDelete = true }, Modifier.weight(1f), enabled = occupied)
+                TeButton("Upload", { pick.launch(arrayOf("audio/*", "application/octet-stream")) }, Modifier.weight(1f))
+            }
         }
         Gap(8)
     }
 
-    if (renaming && selected != 0) {
-        var text by remember { mutableStateOf(names[selected].orEmpty()) }
-        AlertDialog(
-            onDismissRequest = { renaming = false },
-            confirmButton = { TextButton({ vm.rename(selected, text); renaming = false }) { Text("OK") } },
-            dismissButton = { TextButton({ renaming = false }) { Text("CANCEL") } },
-            title = { Text("RENAME ${"%03d".format(selected)}") },
-            text = {
-                Column {
-                    OutlinedTextField(text, { text = it }, singleLine = true, keyboardOptions = KeyboardOptions.Default)
-                    Text("Shown as: " + de.koii.protocol.Names.normalizeSlotName(text), style = MaterialTheme.typography.bodySmall)
-                }
-            },
-        )
-    }
-
-    if (confirmDelete && selected != 0) {
+    if (confirmDelete && (multi.isNotEmpty() || selected != 0)) {
+        val ids = if (multi.isNotEmpty()) multi.sorted() else listOf(selected)
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            confirmButton = { TextButton({ vm.deleteToTrash(listOf(selected)); confirmDelete = false; selected = 0 }) { Text("DELETE") } },
+            confirmButton = {
+                TextButton({ vm.deleteToTrash(ids); confirmDelete = false; selected = 0; multi = emptySet() }) { Text("DELETE") }
+            },
             dismissButton = { TextButton({ confirmDelete = false }) { Text("CANCEL") } },
-            title = { Text("DELETE ${"%03d".format(selected)}?") },
+            title = { Text(if (ids.size == 1) "DELETE ${"%03d".format(ids[0])}?" else "DELETE ${ids.size} SOUNDS?") },
             text = { Text("A copy is kept in the app trash and can be restored.") },
         )
     }
 }
+
+private fun entryName(e: de.koii.protocol.FileEntry?): String = e?.name.orEmpty()
 
 @Composable
 fun UploadScreen(vm: KoiiViewModel) {
