@@ -79,7 +79,10 @@ fun SoundsScreen(vm: KoiiViewModel) {
         if (uri != null && multi.isNotEmpty()) { vm.exportSounds(multi.sorted(), uri); multi = emptySet() }
     }
 
-    Screen("Sounds", actions = { TeButton("Trash", onClick = { vm.open(Sub.Trash) }) }) {
+    Screen("Sounds", actions = {
+        TeButton("Editor", onClick = { vm.open(Sub.Editor) })
+        TeButton("Trash", onClick = { vm.open(Sub.Trash) }, modifier = Modifier.padding(start = 6.dp))
+    }) {
         if (link !is Link.Online) {
             Text("Connect the K.O. II with a USB-C data cable. Its sounds appear here, ready to search, edit and sort.", style = MaterialTheme.typography.bodyMedium)
             return@Screen

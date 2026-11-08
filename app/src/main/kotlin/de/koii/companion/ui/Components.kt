@@ -197,7 +197,7 @@ fun TabBar(labels: List<String>, selected: Int, onSelect: (Int) -> Unit) {
                     Box(Modifier.size(width = 24.dp, height = 3.dp).clip(CircleShape).background(if (on) Ink.Accent else Ink.Surface))
                     Text(
                         l, color = if (on) Ink.Fg else Ink.Dim,
-                        style = MaterialTheme.typography.labelLarge, maxLines = 1, modifier = Modifier.padding(top = 6.dp),
+                        style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp), maxLines = 1, modifier = Modifier.padding(top = 6.dp),
                     )
                 }
             }

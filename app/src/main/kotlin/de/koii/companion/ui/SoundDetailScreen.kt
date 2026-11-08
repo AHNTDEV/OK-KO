@@ -74,6 +74,8 @@ fun SoundDetailScreen(vm: KoiiViewModel, id: Int) {
                 TeButton("Rename", { renaming = true }, Modifier.weight(1f))
                 TeButton("Save WAV", { save.launch((names[id] ?: "sound") + ".wav") }, Modifier.weight(1f))
             }
+            Gap(6)
+            TeButton("Edit sample", { vm.openEditorFromDevice(id) }, Modifier.fillMaxWidth())
 
             if (meta == null) {
                 if (d?.error == null) Text("Reading metadata…", style = MaterialTheme.typography.bodySmall)

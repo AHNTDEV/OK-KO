@@ -119,6 +119,8 @@ class MidiController(
     /** CC 123 on the current channel. */
     suspend fun allNotesOff() = send(0xB0 or channel, 123, 0)
 
+    suspend fun sendClockTick() = send(0xF8)
+
     suspend fun start() = send(0xFA)
     suspend fun stop() = send(0xFC)
     suspend fun cont() = send(0xFB)

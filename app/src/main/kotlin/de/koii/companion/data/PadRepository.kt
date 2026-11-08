@@ -32,6 +32,19 @@ class PadRepository(private val session: DeviceSession) {
         session.requireClient().setMetadata(node, buildJsonObject { put("sym", soundNode) }.toString())
     }
 
+    /**
+     * Shows [project] and [group] on the device by writing `{"active": <node id>}` on the parent nodes.
+     * Documented in the community protocol notes; not yet checked on a real K.O. II.
+     */
+    suspend fun showOnDevice(project: Int, group: Char) {
+        val c = session.requireClient()
+        val projectNode = c.resolve("/projects/P%02d".format(project))
+        c.setMetadata(session.projectsNodeId(), buildJsonObject { put("active", projectNode) }.toString())
+        val groupsNode = c.resolve("/projects/P%02d/groups".format(project))
+        val groupNode = c.resolve("/projects/P%02d/groups/%c".format(project, group))
+        c.setMetadata(groupsNode, buildJsonObject { put("active", groupNode) }.toString())
+    }
+
     /** Raw .tar of a project (GET on its node). */
     suspend fun downloadProject(entry: FileEntry, progress: (Long, Long) -> Unit): ByteArray =
         session.requireClient().download(entry.nodeId, progress).bytes

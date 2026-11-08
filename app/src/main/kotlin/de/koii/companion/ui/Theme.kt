@@ -40,16 +40,6 @@ class Palette(
 )
 
 object Palettes {
-    /** Navy with blue accent. */
-    val Slate = Palette(
-        "slate", "Slate", true,
-        bg = Color(0xFF1E293B), surface = Color(0xFF273449), fg = Color(0xFFE2E8F0),
-        dim = Color(0xFF94A3B8), faint = Color(0xFF3B4A63), edge = Color(0xFF475569),
-        accent = Color(0xFF3B82F6), onAccent = Color(0xFFFFFFFF),
-        groups = listOf(Color(0xFF38BDF8), Color(0xFF4ADE80), Color(0xFFFACC15), Color(0xFFFB7185)),
-        lcdBg = Color(0xFF0F172A), lcdFg = Color(0xFFFDBA74),
-    )
-
     /** Warm light grey with the orange of the hardware. */
     val KoII = Palette(
         "koii", "K.O. II", false,
@@ -70,13 +60,13 @@ object Palettes {
         lcdBg = Color(0xFF0B0B0B), lcdFg = Color(0xFFEDEDED),
     )
 
-    val all = listOf(Slate, KoII, Mono)
-    fun byId(id: String?): Palette = all.firstOrNull { it.id == id } ?: Slate
+    val all = listOf(KoII, Mono)
+    fun byId(id: String?): Palette = all.firstOrNull { it.id == id } ?: KoII
 }
 
 /** Current colours. Reading a value inside a composable subscribes it to theme changes. */
 object Ink {
-    var palette by mutableStateOf(Palettes.Slate)
+    var palette by mutableStateOf(Palettes.KoII)
     val Bg get() = palette.bg
     val Surface get() = palette.surface
     val Fg get() = palette.fg

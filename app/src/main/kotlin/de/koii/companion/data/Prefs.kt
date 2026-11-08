@@ -21,7 +21,7 @@ class Prefs(context: Context) {
     private val _bpm = MutableStateFlow(sp.getInt("bpm", 120))
     val bpm: StateFlow<Int> = _bpm
 
-    private val _theme = MutableStateFlow(sp.getString("theme", "slate") ?: "slate")
+    private val _theme = MutableStateFlow(sp.getString("theme", "koii") ?: "koii")
     /** Palette id, see Palettes. */
     val theme: StateFlow<String> = _theme
 

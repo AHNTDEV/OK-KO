@@ -53,7 +53,9 @@ fun PadsScreen(vm: KoiiViewModel) {
     var assignMode by rememberSaveable { mutableStateOf(false) }
     val online = link is Link.Online
 
+    val follow by vm.followDevice.collectAsState()
     LaunchedEffect(online, project, group) { if (online) vm.loadBank() }
+    LaunchedEffect(online, project, group, follow) { if (online && follow) vm.showOnDevice() }
 
     Screen("Pads") {
         Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -127,6 +129,7 @@ fun PadsScreen(vm: KoiiViewModel) {
                 TeButton("+", { g.prefs.setBpm(bpm + 1) })
                 TeButton("Clock", { if (clock) g.midi.stopClock() else g.midi.startClock(bpm) }, selected = clock, enabled = online)
             }
+            Check("Show this project and group on the K.O. II", follow) { vm.followDevice.value = it }
             Label("Velocity $velocity")
             TeSlider(velocity.toFloat(), { g.prefs.setVelocity(it.toInt()) }, valueRange = 1f..127f)
             Gap(8)

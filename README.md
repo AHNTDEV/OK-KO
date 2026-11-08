@@ -54,20 +54,27 @@ Settings (command 6) are not implemented: the device answers "command not found"
 ## 0.2.0
 
 - Pixel-art cassette launcher icon (adaptive vector, `app/src/main/res/drawable/ic_launcher_foreground.xml`).
-- Themes: Slate (default), K.O. II, Mono. Palette switch in Settings.
+- Themes: K.O. II (default) and Mono. Palette switch in Settings.
 - Optional **loop folder** (Settings, system folder picker, no storage permission). Pads → Assign → Loops: audition on the phone, then convert, upload to the next free slot and put it on the pad.
 - Pads: project 1–9 and group A–D, sample names on the pads, group colours.
 - Sounds: search by name or slot, long-press multi-select (bulk delete, bulk export to a folder), sound editor with waveform and metadata sliders (root note, pitch, pan, volume, attack, release, BPM).
 - Keys: on-screen keyboard with chords (maj/min/sus/dim, 6/7/9, low octave) and arpeggiator (4 modes, 6 rates, 3 octaves) on the MIDI channel from Settings. Tempo is the app BPM, not yet locked to the device clock.
 - Library tab: projects, backup/restore, trash.
 
+## 0.3.0
+
+- **Beats**: step sequencer for all 48 pads (groups A–D), 8 to 32 steps, 8 pattern slots, tempo, swing, accents. The phone plays the pads over MIDI; optionally it also sends MIDI start and clock so the K.O. II follows. Patterns export as standard MIDI files or pattern files (JSON) and import from both (notes C2 to B5 map to pads A to D).
+- **Sample editor** (Sounds tab: Edit sample, or Editor to open a file from the phone): waveform with a draggable selection, crop, cut out, silence, trim, reverse, fades, normalize, gain, mono, repitch by semitones, undo, preview. Save as a new sound, replace the original in place (the old version goes to the app trash and the slot keeps its settings), or export a WAV.
+- **Device control**: Pads can switch the K.O. II to the shown project and group by writing the `active` field described in the community protocol notes (not yet checked on a real K.O. II).
+- Slate theme removed; K.O. II is the default.
+
 ## Design
 
-Applied the frontend-design guidance: the top bar is an inset readout after the K.O. II's own display (the only monospaced, capitalised text), pads carry large numerals like the silk-screen on the hardware, titles and keys use the system condensed face and running text the system sans. Text is sentence case, section headings are separated by a rule instead of coloured capitals, and radii follow role (pads large, keys medium, chips round). Palettes: Slate, K.O. II, Mono.
+Applied the frontend-design guidance: the top bar is an inset readout after the K.O. II's own display (the only monospaced, capitalised text), pads carry large numerals like the silk-screen on the hardware, titles and keys use the system condensed face and running text the system sans. Text is sentence case, section headings are separated by a rule instead of coloured capitals, and radii follow role (pads large, keys medium, chips round). Palettes: K.O. II and Mono.
 
 ## Roadmap status
 
 - M1–M3, M5–M7: implemented.
 - M4: MOVE/DELETE client, tap-to-move/swap grid (12 × 4 per page, 4 columns), app trash. Drag-and-drop sorting is not implemented.
 - Navigation (`KoiiViewModel`: tab + sub-screens), `SoundRepository` cache, `TransferManager` + `TransferService`: implemented.
-- Not done: drag-and-drop sorting, arpeggiator sync to the device clock, release signing.
+- Not done: editing the K.O. II's own on-device patterns (the pattern file format is not documented; the Beats sequencer runs on the phone), drag-and-drop sorting, arpeggiator sync to the device clock, release signing.

@@ -162,6 +162,32 @@ class SoundRepository(
         id
     }
 
+    /**
+     * Replaces the sound in [slot] with [sound]: the old one goes to the app trash first, the slot keeps its
+     * number and the old metadata (root note, pitch, envelope …) except values that depend on the audio itself.
+     */
+    suspend fun replace(slot: Int, sound: PreparedSound, displayName: String, oldMeta: JsonObject?): Int = opLock.withLock {
+        val c = session.requireClient()
+        val old = c.download(slot)
+        val oldJson = oldMeta ?: runCatching { c.getMetadata(slot) }.getOrDefault(JsonObject(emptyMap()))
+        trash.add(slot, oldJson["name"]?.jsonPrimitive?.content ?: old.name, old.bytes, oldJson.toString())
+        c.delete(slot)
+        val name = Names.normalizeSlotName(displayName).ifEmpty { "sample" }
+        val id = c.upload(name, sound.pcm, session.soundsNodeId(), fileId = slot)
+        val drop = setOf("channels", "samplerate", "name", "sound.loopstart", "sound.loopend", "regions")
+        val merged = buildJsonObject {
+            oldJson.forEach { (k, v) -> if (k !in drop) put(k, v) }
+            put("channels", sound.channels)
+            put("samplerate", sound.sampleRate)
+            put("name", name)
+        }
+        c.setMetadata(id, merged.toString())
+        _names.update { it + (id to name) }
+        refresh()
+        session.refreshStorage()
+        id
+    }
+
     // ---- transfers -----------------------------------------------------------------------
 
     /** Decodes and converts a file off the main thread; MediaDecoder handles non-WAV/AIFF formats. */

@@ -82,7 +82,7 @@ fun SettingsScreen(vm: KoiiViewModel) {
             }
 
             Label("About")
-            KeyValue("Version", "0.2.0")
+            KeyValue("Version", "0.3.0")
             KeyValue("Protocol", "TE SysEx file protocol, USB-MIDI bulk")
             Gap()
             Text(

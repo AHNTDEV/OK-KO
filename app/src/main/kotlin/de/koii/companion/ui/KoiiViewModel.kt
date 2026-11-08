@@ -6,7 +6,11 @@ import android.provider.DocumentsContract
 import android.provider.OpenableColumns
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import de.koii.audio.AudioConverter
+import de.koii.audio.FrameRange
 import de.koii.audio.MediaDecoder
+import de.koii.audio.PcmAudio
+import de.koii.audio.SampleOps
 import de.koii.audio.PreparedSound
 import de.koii.audio.WavCodec
 import de.koii.companion.AppGraph
@@ -15,6 +19,8 @@ import de.koii.companion.data.BackupMeta
 import de.koii.companion.data.BackupRepository
 import de.koii.companion.data.LoopFile
 import de.koii.companion.data.TrashItem
+import de.koii.companion.seq.MidiFile
+import de.koii.companion.seq.Pattern
 import de.koii.protocol.FileEntry
 import de.koii.protocol.Names
 import kotlinx.coroutines.Dispatchers
@@ -28,7 +34,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
-enum class Tab(val label: String) { PADS("Pads"), SOUNDS("Sounds"), KEYS("Keys"), REC("Rec"), LIBRARY("Library") }
+enum class Tab(val label: String) { PADS("Pads"), BEATS("Beats"), SOUNDS("Sounds"), KEYS("Keys"), REC("Rec"), LIBRARY("Library") }
 
 sealed interface Sub {
     data object Device : Sub
@@ -37,6 +43,7 @@ sealed interface Sub {
     data object Trash : Sub
     data class PadAssign(val project: Int, val group: Char, val pad: Int) : Sub
     data class SoundDetail(val id: Int) : Sub
+    data object Editor : Sub
 }
 
 data class StagedUpload(
@@ -53,6 +60,29 @@ class DetailState(
     val peaks: FloatArray? = null,
     val error: String? = null,
 )
+
+/** Where the audio in the editor came from. */
+sealed interface EditorSource {
+    data object None : EditorSource
+    data class Device(val slot: Int, val meta: JsonObject?) : EditorSource
+    data class File(val fileName: String) : EditorSource
+}
+
+class EditorState(
+    val source: EditorSource = EditorSource.None,
+    val name: String = "",
+    val audio: PcmAudio? = null,
+    val peaks: FloatArray = FloatArray(0),
+    /** Selection as fractions of the length; equal values mean no selection. */
+    val selStart: Float = 0f,
+    val selEnd: Float = 0f,
+    val undo: List<PcmAudio> = emptyList(),
+    val loading: Boolean = false,
+    val error: String? = null,
+) {
+    val hasSelection: Boolean get() = selEnd > selStart
+    fun range(): FrameRange? = audio?.takeIf { hasSelection }?.let { SampleOps.rangeFromFractions(it, selStart, selEnd) }
+}
 
 class KoiiViewModel(app: Application) : AndroidViewModel(app) {
     val g: AppGraph = (app as KoiiApp).graph
@@ -311,4 +341,193 @@ class KoiiViewModel(app: Application) : AndroidViewModel(app) {
         }
         g.player.play(pcm) { err -> if (err != null) say("Play to device: ${err.message}") }
     }
+
+    // ---- sample editor ------------------------------------------------------------------------
+    private val _editor = MutableStateFlow(EditorState())
+    val editor: StateFlow<EditorState> = _editor
+    private var editorJob: Job? = null
+
+    private fun peaksOf(a: PcmAudio) = Peaks.fromFloats(a.samples, a.channels, 320)
+
+    private fun loadEditor(initial: EditorSource, name: String, load: suspend () -> Pair<PcmAudio, EditorSource>) {
+        open(Sub.Editor)
+        g.preview.stop()
+        _editor.value = EditorState(source = initial, name = name, loading = true)
+        editorJob?.cancel()
+        editorJob = viewModelScope.launch {
+            try {
+                val (audio, source) = withContext(Dispatchers.Default) { load() }
+                _editor.value = EditorState(source, name, audio, peaksOf(audio))
+            } catch (e: Exception) {
+                _editor.value = EditorState(initial, name, error = e.message ?: e.javaClass.simpleName)
+            }
+        }
+    }
+
+    /** Opens a sound from the device in the editor. */
+    fun openEditorFromDevice(id: Int) {
+        val name = g.sounds.displayName(id).ifEmpty { "%03d".format(id) }
+        loadEditor(EditorSource.Device(id, null), name) {
+            val c = g.session.requireClient()
+            val meta = c.getMetadata(id)
+            val dl = c.download(id)
+            val ch = (meta["channels"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toIntOrNull() ?: 1
+            val rate = (meta["samplerate"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toIntOrNull() ?: AudioConverter.TARGET_RATE
+            WavCodec.pcm16ToAudio(dl.bytes, ch.coerceIn(1, 2), rate) to EditorSource.Device(id, meta)
+        }
+    }
+
+    /** Opens an audio file from the phone in the editor (any format the app can decode). */
+    fun openEditorFromFile(uri: Uri) {
+        val file = fileName(uri)
+        val src = EditorSource.File(file)
+        loadEditor(src, Names.normalizeSlotName(file).ifEmpty { "sample" }) {
+            val bytes = withContext(Dispatchers.IO) { readBytes(uri) }
+            val audio = when {
+                WavCodec.isWav(bytes) -> WavCodec.decode(bytes)
+                de.koii.audio.AiffCodec.isAiff(bytes) -> de.koii.audio.AiffCodec.decode(bytes)
+                else -> MediaDecoder.decode(bytes)
+            }
+            audio to src
+        }
+    }
+
+    fun editorSelect(from: Float, to: Float) {
+        _editor.update { it.copy2(selStart = minOf(from, to).coerceIn(0f, 1f), selEnd = maxOf(from, to).coerceIn(0f, 1f)) }
+    }
+
+    fun editorClearSelection() = editorSelect(0f, 0f)
+
+    /** Applies an edit to the whole sample or the selection; keeps the previous state for undo. */
+    fun editorApply(keepSelection: Boolean = false, op: (PcmAudio, FrameRange?) -> PcmAudio) {
+        val e = _editor.value
+        val a = e.audio ?: return
+        g.preview.stop()
+        val next = op(a, e.range())
+        _editor.value = e.copy2(
+            audio = next, peaks = peaksOf(next), undo = (e.undo + a).takeLast(20),
+            selStart = if (keepSelection) e.selStart else 0f, selEnd = if (keepSelection) e.selEnd else 0f,
+        )
+    }
+
+    fun editorUndo() {
+        val e = _editor.value
+        val prev = e.undo.lastOrNull() ?: return
+        g.preview.stop()
+        _editor.value = e.copy2(audio = prev, peaks = peaksOf(prev), undo = e.undo.dropLast(1), selStart = 0f, selEnd = 0f)
+    }
+
+    fun editorRename(name: String) { _editor.update { it.copy2(name = name) } }
+
+    fun editorPlay() {
+        val e = _editor.value
+        val a = e.audio ?: return
+        if (g.preview.playing.value) g.preview.stop() else g.preview.play(a, e.range()) { say(it) }
+    }
+
+    private fun prepareForDevice(a: PcmAudio) = AudioConverter.convert(a)
+
+    /** Sends the edited sample to the next free slot. */
+    fun editorSaveNew() {
+        val e = _editor.value
+        val a = e.audio ?: return
+        queue("Save sample") { p ->
+            val sound = withContext(Dispatchers.Default) { prepareForDevice(a) }
+            val slot = g.sounds.freeSlots().firstOrNull() ?: error("No free slot")
+            g.sounds.upload(sound, e.name, slot, p)
+            say("Saved as slot ${"%03d".format(slot)}")
+        }
+    }
+
+    /** Replaces the sound this edit started from; the old version goes to the trash. */
+    fun editorReplace() {
+        val e = _editor.value
+        val a = e.audio ?: return
+        val src = e.source as? EditorSource.Device ?: return
+        queue("Replace sound") { _ ->
+            val sound = withContext(Dispatchers.Default) { prepareForDevice(a) }
+            g.sounds.replace(src.slot, sound, e.name, src.meta)
+            say("Replaced slot ${"%03d".format(src.slot)}. The old version is in the trash.")
+        }
+    }
+
+    /** Exports the edited sample as a 16-bit WAV file. */
+    fun editorExportWav(uri: Uri) {
+        val a = _editor.value.audio ?: return
+        queue("Export WAV") { _ ->
+            val wav = withContext(Dispatchers.Default) { WavCodec.wrapPcm16(WavCodec.encodePcm16(a.samples), a.channels, a.sampleRate) }
+            withContext(Dispatchers.IO) { resolver.openOutputStream(uri)!!.use { it.write(wav) } }
+            say("Exported WAV")
+        }
+    }
+
+    fun leaveEditor() {
+        g.preview.stop()
+        back()
+    }
+
+    // ---- sequencer ----------------------------------------------------------------------------
+    val seqGroup = MutableStateFlow(0)
+    val seqSendClock = MutableStateFlow(false)
+
+    fun seqToggle() {
+        if (g.sequencer.running) g.sequencer.stop()
+        else g.sequencer.start({ g.patterns.current() }, seqSendClock.value)
+    }
+
+    fun seqAudition(group: Int, pad: Int) = op("Pad") {
+        val note = Pattern.noteOf(Pattern.track(group, pad))
+        g.midi.noteOn(note)
+        kotlinx.coroutines.delay(120)
+        g.midi.noteOff(note)
+    }
+
+    fun seqExportMidi(uri: Uri) {
+        val p = g.patterns.current()
+        val bytes = MidiFile.write(p, (g.prefs.midiChannel.value - 1) and 0x0F)
+        op("Export MIDI") { withContext(Dispatchers.IO) { resolver.openOutputStream(uri)!!.use { it.write(bytes) } }; say("Exported ${p.name} as MIDI file") }
+    }
+
+    fun seqExportJson(uri: Uri) {
+        val text = g.patterns.exportJson()
+        op("Export pattern") { withContext(Dispatchers.IO) { resolver.openOutputStream(uri)!!.use { it.write(text.toByteArray()) } }; say("Exported pattern file") }
+    }
+
+    /** Imports a MIDI file or a pattern file into the selected pattern slot. */
+    fun seqImport(uri: Uri) = op("Import") {
+        val bytes = withContext(Dispatchers.IO) { readBytes(uri) }
+        val name = fileName(uri).substringBeforeLast('.').take(24).ifEmpty { "Imported" }
+        if (bytes.size > 4 && String(bytes, 0, 4, Charsets.ISO_8859_1) == "MThd") {
+            val r = MidiFile.read(bytes, name)
+            g.patterns.replace(r.pattern)
+            say(
+                "Imported ${r.pattern.hitCount()} hits" +
+                    (if (r.skippedNotes > 0) ", skipped ${r.skippedNotes} notes outside C2 to B5" else "") +
+                    (if (r.truncated) ", cut after 32 steps" else ""),
+            )
+        } else {
+            g.patterns.replace(g.patterns.parseJson(bytes.decodeToString()).copy(name = name))
+            say("Imported pattern")
+        }
+    }
+
+    // ---- device control ---------------------------------------------------------------------------
+    val followDevice = MutableStateFlow(false)
+
+    /** Switches the K.O. II to the project and group shown in the app. */
+    fun showOnDevice() = op("Show on device") {
+        g.pads.showOnDevice(padProject.value, de.koii.companion.data.PadRepository.GROUPS[padGroup.value])
+    }
 }
+
+private fun EditorState.copy2(
+    source: EditorSource = this.source,
+    name: String = this.name,
+    audio: PcmAudio? = this.audio,
+    peaks: FloatArray = this.peaks,
+    selStart: Float = this.selStart,
+    selEnd: Float = this.selEnd,
+    undo: List<PcmAudio> = this.undo,
+    loading: Boolean = this.loading,
+    error: String? = this.error,
+) = EditorState(source, name, audio, peaks, selStart, selEnd, undo, loading, error)

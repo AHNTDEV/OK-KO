@@ -87,12 +87,14 @@ private fun Root(vm: KoiiViewModel) {
             when (val s = sub) {
                 Sub.Device -> DeviceScreen(vm)
                 Sub.Settings -> SettingsScreen(vm)
+                Sub.Editor -> EditorScreen(vm)
                 Sub.Upload -> UploadScreen(vm)
                 Sub.Trash -> TrashScreen(vm)
                 is Sub.PadAssign -> PadAssignScreen(vm, s)
                 is Sub.SoundDetail -> SoundDetailScreen(vm, s.id)
                 null -> when (tab) {
                     Tab.PADS -> PadsScreen(vm)
+                    Tab.BEATS -> BeatsScreen(vm)
                     Tab.SOUNDS -> SoundsScreen(vm)
                     Tab.KEYS -> KeysScreen(vm)
                     Tab.REC -> RecorderScreen(vm)

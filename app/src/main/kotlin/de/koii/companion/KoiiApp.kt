@@ -1,6 +1,7 @@
 package de.koii.companion
 
 import android.app.Application
+import de.koii.audio.PreviewPlayer
 import de.koii.audio.UsbAudioPlayer
 import de.koii.audio.UsbAudioRecorder
 import de.koii.companion.data.BackupRepository
@@ -14,6 +15,8 @@ import de.koii.companion.data.TransferManager
 import de.koii.companion.data.TrashRepository
 import de.koii.companion.midi.KeyboardPlayer
 import de.koii.companion.midi.MidiController
+import de.koii.companion.seq.SequencerEngine
+import de.koii.companion.seq.SequencerRepository
 import de.koii.companion.usb.UsbDeviceManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -34,6 +37,9 @@ class AppGraph(app: Application) {
     val keys = KeyboardPlayer(midi, prefs, scope)
     val loops = LoopRepository(app, prefs, scope)
     val localPlayer = LocalPlayer(app)
+    val patterns = SequencerRepository(app, scope)
+    val sequencer = SequencerEngine(midi, scope)
+    val preview = PreviewPlayer(scope)
     val transfers = TransferManager(app, scope)
     val recorder = UsbAudioRecorder(app, scope)
     val player = UsbAudioPlayer(app, scope)

@@ -110,6 +110,15 @@ object WavCodec {
         return out.toByteArray()
     }
 
+    /** Raw s16le PCM (as the K.O. II stores sounds) to float audio. */
+    fun pcm16ToAudio(pcm: ByteArray, channels: Int, sampleRate: Int): PcmAudio {
+        val ch = channels.coerceAtLeast(1)
+        val n = pcm.size / 2 / ch * ch
+        val out = FloatArray(n)
+        for (i in 0 until n) out[i] = pcm.le16(i * 2).toShort() / 32768f
+        return PcmAudio(sampleRate, ch, out)
+    }
+
     fun encodePcm16(samples: FloatArray): ByteArray {
         val out = ByteArray(samples.size * 2)
         for (i in samples.indices) {
