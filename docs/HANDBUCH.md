@@ -2,7 +2,7 @@
 
 Version 0.3.0. Die App steuert die Teenage Engineering EP-133 K.O. II über USB-C: Samples verwalten und bearbeiten, Pads belegen, Beats programmieren, Akkorde spielen, aufnehmen und sichern.
 
-Die Bezeichnungen der Tasten stehen in der App auf Englisch. Dieses Handbuch nennt sie in Anführungszeichen, damit du sie wiederfindest.
+Eine englische Fassung steht in [MANUAL.md](MANUAL.md). Die Bezeichnungen der Tasten stehen in der App auf Englisch. Dieses Handbuch nennt sie in Anführungszeichen, damit du sie wiederfindest.
 
 ## 1. Los geht's
 
